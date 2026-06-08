@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  FACULTY
+  STUDENT
+}
+
+enum QuestionCategory {
+  COURSE_OUTCOMES
+  SUBJECT_FEEDBACK
+  FACULTY_FEEDBACK
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
+  name     String
+  role     Role   @default(STUDENT)
+
+  // Student specific metadata
+  enrollmentId String? @unique
+  branch       String?
+  semester     Int?
+  section      String?
+
+  // Relations
+  coursesAssigned Course[]     @relation("FacultyCourses")
+  feedbacks       Feedback[]
+  actionPlans     ActionPlan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Course {
+  id       Int    @id @default(autoincrement())
+  name     String
+  code     String @unique
+  branch   String
+  semester Int
+  section  String
+
+  facultyId Int?
+  faculty   User? @relation("FacultyCourses", fields: [facultyId], references: [id])
+
+  deadline DateTime?
+
+  questions     Question[]
+  feedbacks     Feedback[]
+  actionPlan    ActionPlan?
+  uploadedFiles UploadedFile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Question {
+  id       Int              @id @default(autoincrement())
+  text     String
+  category QuestionCategory
+
+  courseId Int
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  answers FeedbackAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Feedback {
+  id Int @id @default(autoincrement())
+
+  studentId Int
+  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  courseId Int
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  answers FeedbackAnswer[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId])
+}
+
+model FeedbackAnswer {
+  id Int @id @default(autoincrement())
+
+  feedbackId Int
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  rating Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([feedbackId, questionId])
+}
+
+model ActionPlan {
+  id Int @id @default(autoincrement())
+
+  courseId Int    @unique
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  facultyId Int?
+  faculty   User? @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+
+  status   String  @default("PENDING") // PENDING, SUBMITTED
+  planText String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UploadedFile {
+  id         Int      @id @default(autoincrement())
+  fileName   String
+  fileType   String // "CO", "CURRICULUM", "TEACHING"
+  uploadedAt DateTime @default(now())
+
+  courseId Int
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  records  ManualFeedbackRecord[]
+  analysis AnalysisResult?
+}
+
+model ManualFeedbackRecord {
+  id Int @id @default(autoincrement())
+
+  uploadedFileId Int
+  uploadedFile   UploadedFile @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
+
+  studentIdentifier String?
+  responses         Json
+}
+
+model AnalysisResult {
+  id Int @id @default(autoincrement())
+
+  uploadedFileId Int          @unique
+  uploadedFile   UploadedFile @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
+
+  questionAverages Json?
+  overallSummary   Json?
+
+  createdAt DateTime @default(now())
+}

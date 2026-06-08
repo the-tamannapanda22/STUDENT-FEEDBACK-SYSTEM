@@ -1,0 +1,2 @@
+Unknown property datasources provided to PrismaClient constructor.
+Read more at https://pris.ly/d/client-constructor

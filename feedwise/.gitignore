@@ -1,0 +1,19 @@
+# Node.js
+node_modules/
+.npm/
+
+# Environment Variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Mac
+.DS_Store
+
+# Git
+.git/
+
+# Frontend specifics are handled by frontend/.gitignore
